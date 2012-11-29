@@ -26,8 +26,10 @@
 package org.geotools.process.raster.changematrix;
 
 import java.awt.Rectangle;
+import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
+import java.awt.image.WritableRaster;
 import java.util.Map;
 
 import javax.media.jai.AreaOpImage;
@@ -35,10 +37,13 @@ import javax.media.jai.BorderExtender;
 import javax.media.jai.ImageLayout;
 import javax.media.jai.PlanarImage;
 import javax.media.jai.ROI;
+import javax.media.jai.RasterAccessor;
+import javax.media.jai.RasterFormatTag;
 import javax.media.jai.iterator.RectIter;
 import javax.media.jai.iterator.RectIterFactory;
 
 import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
+import org.jaitools.imageutils.iterator.SimpleIterator;
 import org.jaitools.numeric.Statistic;
 
 
@@ -136,12 +141,28 @@ public class ChangeMatrixOpImage extends AreaOpImage {
 
 		// check roi 
 		if(roi==null||roi.intersects(sourceBounds)){
+//		
+//		  // loop on tile and check
+//		  final SimpleIterator  iteratorSource=new SimpleIterator(source,sourceBounds,Integer.valueOf(-1));//.create(source, sourceBounds);
+//		  final SimpleIterator iteratorReference=new SimpleIterator(referenceImage,sourceBounds,Integer.valueOf(-1));//RectIterFactory.create(referenceImage, sourceBounds);
+//		
+//		  // loop
+//		  do {
+//			  // in ROI?
+//			  if(roi!=null&&!roi.contains(iteratorSource.getPos())){
+//				  continue;
+//			  }
+//			  int sampleSource = iteratorSource.getSample(bandSource).intValue();
+//			  int sampleReference = iteratorReference.getSample(bandReference).intValue();
+//			  result.registerPair(sampleReference, sampleSource);
+//
+//			} while (iteratorSource.next());
+//		}
 		
 		  // loop on tile and check
-		  final RectIter iteratorSource=RectIterFactory.create(source, sourceBounds);
-		  final RectIter iteratorReference=RectIterFactory.create(referenceImage, sourceBounds);
-		
-		
+		final RectIter  iteratorSource=RectIterFactory.create(source, sourceBounds);
+		final RectIter iteratorReference=RectIterFactory.create(referenceImage, sourceBounds);
+				
 		  // loop
 		  int row=0;
 		  int col=0;
@@ -154,9 +175,14 @@ public class ChangeMatrixOpImage extends AreaOpImage {
 				  }
 
 				  // extract value
+				  try{
 				  int sampleSource=iteratorSource.getSample(bandSource);
 				  int sampleReference=iteratorReference.getSample(bandReference);
+
 				  result.registerPair(sampleReference, sampleSource);
+				  }catch(Exception e){
+					  System.out.println(col+","+row);
+				  }
 
 				
 				  // progress pixels

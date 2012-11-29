@@ -50,7 +50,7 @@ public class ChangeMatrixTest extends Assert {
 		final RenderedOp reference=  JAI.create("ImageRead",new File("d:/data/unina/clc2000_L3_100m.tif"));
 		
 		final ImageLayout layout= new ImageLayout();
-		layout.setTileHeight(256).setTileHeight(256);
+		layout.setTileHeight(512).setTileWidth(512);
 		final RenderingHints hints= new RenderingHints(JAI.KEY_IMAGE_LAYOUT, layout);
 		
 		pbj.addSource(source);
@@ -68,7 +68,7 @@ public class ChangeMatrixTest extends Assert {
 			}
 		}
 		final CountDownLatch sem= new CountDownLatch(result.getNumXTiles()*result.getNumYTiles());
-		ExecutorService ex = Executors.newFixedThreadPool(5);
+		ExecutorService ex = Executors.newFixedThreadPool(10);
 		for(final Point tile:tiles){
 			ex.execute(new Runnable() {
 				
