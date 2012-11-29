@@ -31,7 +31,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.media.jai.OperationDescriptorImpl;
 import javax.media.jai.ROI;
@@ -113,15 +115,18 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
 	 *
 	 */
 	public static class ChangeMatrix {
+		
+		/**This one is used to signal this class that we should not update the internal counters any longer.*/
+		private boolean frozen= false;
 
 		/**Used to signal non existing values in the results.*/
-		public static final int NO_VALUE=-1;
+		public static final long NO_VALUE=-1;
 		
 		/**Mappings between real-world classes and indexes in the sparse matrix*/
 		private Map<Integer,Integer> classesMappings= new HashMap<Integer, Integer>();
 		
 		/**Sparse matrix to hold the results*/
-		private List<AtomicInteger> matrix;
+		private List<AtomicLong> matrix;
 
 		/**Number of classes.*/
 		private int classesNumber;
@@ -144,9 +149,9 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
 			
 			// matrix as list
 			classesNumber= classes.size();
-			matrix = new ArrayList<AtomicInteger>(classesNumber*classesNumber);
+			matrix = new ArrayList<AtomicLong>(classesNumber*classesNumber);
 			for(int i=classesNumber*classesNumber-1;i>=0;i--){
-				matrix.add(new AtomicInteger(0));
+				matrix.add(new AtomicLong(0));
 			}
 			
 			//mappings
@@ -158,43 +163,63 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
 		}
 		
 		/**
-		 * Register the change, if the two values fall
-		 * @param reference
-		 * @param newSample
+		 * Register the change, if the two classes are within
+		 * those we were asked to compute changes for.
+		 * 
+		 * @param reference, the initial class
+		 * @param newSample, the landing class
 		 */
-		public void registerPair(int reference, int newSample){
+		public void registerPair(int reference, int now){
+			if(frozen){
+				return;
+			}
 			Integer row=classesMappings.get(reference);
-			Integer col=classesMappings.get(newSample);
+			Integer col=classesMappings.get(now);
 			if(row!=null&&col!=null){
 				matrix.get(col+row*classesNumber).incrementAndGet();
 			}
+			
+			
 		}
 		
-		public int retrievePairOccurrences(int reference, int newSample){
+		/**
+		 * Retrieves the change value for a certain order pair of classes.
+		 * <p>
+		 * In case one of both classes weren't part of the set of classes 
+		 * for which we were asked to compute changes, {@link #NO_VALUE} is
+		 * returned.
+		 * 
+		 * @param reference, the value for the reference image
+		 * @param now, the value for the second image
+		 * @return a <code>long</code> that holds the number of pixels that changed class
+		 * as per the provided ones, or {@link #NO_VALUE} in case one of the two, or both, classes
+		 * weren't in the initial set of classes to register changes for.
+		 */
+		public long retrievePairOccurrences(int reference, int now){
 			Integer row=classesMappings.get(reference);
-			Integer col=classesMappings.get(newSample);
+			Integer col=classesMappings.get(now);
 			if(row!=null&&col!=null){
 				return matrix.get(col+row*classesNumber).get();
 			} else {
 				return NO_VALUE;
 			}
 		}
-		
-		public boolean isClassUsed(int clazz){
-			Integer mapping=classesMappings.get(clazz);
-			if(mapping!=null){
-				return true;
-			} else {
-				return false;
-			}
-		}
 				
-		public Map<Integer, Integer> getClassesMappings() {
-			return new HashMap<Integer, Integer>(classesMappings);
-		}
-
+		/**
+		 * Retrieves the number of classes we have been asked to register changes for
+		 * @return int, the number of classes we have been asked to register changes for
+		 */
 		public int getClassesNumber() {
 			return classesNumber;
+		}
+		
+		/**
+		 * This is used to indicate to the underlying code to stop registering values as
+		 * the computation has been performed already.
+		 * 
+		 */
+		public void freeze(){
+			frozen=true;
 		}
 	}
 

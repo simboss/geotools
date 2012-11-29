@@ -26,9 +26,12 @@
 package org.geotools.process.raster.changematrix;
 
 import java.awt.Rectangle;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBuffer;
+import java.awt.image.MultiPixelPackedSampleModel;
 import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
+import java.awt.image.SampleModel;
 import java.awt.image.WritableRaster;
 import java.util.Map;
 
@@ -47,6 +50,9 @@ import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMat
 import org.jaitools.imageutils.iterator.SimpleIterator;
 import org.jaitools.numeric.Statistic;
 
+import com.sun.media.jai.util.ImageUtil;
+import com.sun.media.jai.util.JDKWorkarounds;
+
 
 /**
  * An operator to calculate change in pixels between two classified images
@@ -59,14 +65,14 @@ import org.jaitools.numeric.Statistic;
  */
 public class ChangeMatrixOpImage extends PointOpImage {
 
+	private ROI roi;
 	
-    private ROI roi;
 	private ChangeMatrix result;
     
     /**
      * Creates a new instance.
      * 
-     * @param source the source image
+     * @param now the source image
      * 
      * @param config configurable attributes of the image (see {@link AreaOpImage})
      * 
@@ -89,16 +95,16 @@ public class ChangeMatrixOpImage extends PointOpImage {
      * @see ChangeMatrix
      */
     public ChangeMatrixOpImage(
-    		RenderedImage source,
-    		RenderedImage referenceImage,
+    		RenderedImage reference,
+    		RenderedImage now,
             Map config,
             ImageLayout layout,
             ROI roi,
             ChangeMatrix result) {
 
-        super(source,
-        	  referenceImage,
-              layout,
+        super(reference,
+          	  now,
+        	  layout,
               config,
               true);
 
@@ -109,7 +115,7 @@ public class ChangeMatrixOpImage extends PointOpImage {
         if (roi != null) {
             // check that the ROI contains the source image bounds
             Rectangle sourceBounds = new Rectangle(
-                    source.getMinX(), source.getMinY(), source.getWidth(), source.getHeight());
+                    now.getMinX(), now.getMinY(), now.getWidth(), now.getHeight());
 
             if (!roi.getBounds().contains(sourceBounds)) {
                 throw new IllegalArgumentException("The bounds of the ROI must contain the source image");
@@ -145,21 +151,6 @@ public class ChangeMatrixOpImage extends PointOpImage {
 	    RasterAccessor d = new RasterAccessor(dest, destRect,  
 	                                          formatTags[2], getColorModel());
 	
-	    if(d.isBinary()) {
-	        byte[] src1Bits = s1.getBinaryDataArray();
-	        byte[] src2Bits = s2.getBinaryDataArray();
-	        byte[] dstBits = d.getBinaryDataArray();
-	
-	        int length = dstBits.length;
-	        for(int i = 0; i < length; i++) {
-	            dstBits[i] = (byte)(src1Bits[i] & src2Bits[i]);
-	        }
-	
-	        d.copyBinaryDataToRaster();
-	
-	        return;
-	    }
-	
 	    int src1LineStride = s1.getScanlineStride();
 	    int src1PixelStride = s1.getPixelStride();
 	    int[] src1BandOffsets = s1.getBandOffsets();
@@ -176,7 +167,7 @@ public class ChangeMatrixOpImage extends PointOpImage {
 	    int[] dstBandOffsets = d.getBandOffsets();
 	
 	    
-        switch (d.getDataType()) {
+        switch (s1.getDataType()) {
 	    
         case DataBuffer.TYPE_BYTE:
             byteLoop(dstNumBands, dstWidth, dstHeight,
@@ -210,7 +201,7 @@ public class ChangeMatrixOpImage extends PointOpImage {
             break;
         }
 	
-	    d.copyDataToRaster();
+        d.copyBinaryDataToRaster();
 	}
 
 
@@ -241,9 +232,9 @@ public class ChangeMatrixOpImage extends PointOpImage {
 		for (int w = 0; w < dstWidth; w++) {
         	final int before=(s1[src1PixelOffset]);
         	final int after= (s2[src1PixelOffset]);			
-            d[dstPixelOffset] = before==after?(byte)0:(byte)1;
+            d[dstPixelOffset] = before==after?0:1;
             //		    if(roi==null||roi.contains(x, y)){
-            result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
+            result.registerPair(before,after);
             //	    }		
 
 		    
@@ -283,7 +274,7 @@ public class ChangeMatrixOpImage extends PointOpImage {
 	            for (int w = 0; w < dstWidth; w++) {
 	            	final byte before= (byte)(s1[src1PixelOffset]);
 	            	final byte after= (byte)(s2[src1PixelOffset]);
-		            d[dstPixelOffset] =(byte) before==after?(byte)0:(byte)1;
+		            d[dstPixelOffset] = before==after?(byte)0:(byte)1;
 //		            if(roi==null||roi.contains(x, y)){
 		            	result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
 //		            }	    
@@ -323,7 +314,7 @@ public class ChangeMatrixOpImage extends PointOpImage {
 	            for (int w = 0; w < dstWidth; w++) {
 	            	final short before= (short)(s1[src1PixelOffset]);
 	            	final short after= (short)(s2[src1PixelOffset]);
-		            d[dstPixelOffset] =(short) before==after?(byte)0:(byte)1;
+		            d[dstPixelOffset] = before==after?(short)0:(short)1;
 		            //		    if(roi==null||roi.contains(x, y)){
 		            result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
 		            //	    }		
