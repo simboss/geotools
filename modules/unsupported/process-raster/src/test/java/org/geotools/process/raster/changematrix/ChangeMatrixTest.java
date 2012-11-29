@@ -100,6 +100,39 @@ public class ChangeMatrixTest extends Assert {
 	}
 	
 	@Test
+	public void testDifferentDimensions(){
+		final Set<Integer> classes = new HashSet<Integer>();
+		classes.add(0);
+		classes.add(1);
+		classes.add(35);
+		classes.add(36);
+		classes.add(37);
+		final ChangeMatrix cm= new ChangeMatrix(classes);
+		
+		RenderedOp reference= ConstantDescriptor.create(
+				Float.valueOf(800), 
+				Float.valueOf(600), 
+				new Integer[]{Integer.valueOf(1)}, 
+				null);
+		RenderedOp now= ConstantDescriptor.create(
+				Float.valueOf(700), 
+				Float.valueOf(600), 
+				new Integer[]{Integer.valueOf(0)}, 
+				null);		
+		final ParameterBlockJAI pbj=new ParameterBlockJAI("ChangeMatrix");
+		pbj.addSource(reference);
+		pbj.addSource(now);
+		pbj.setParameter("result", cm);
+		final RenderedOp result = JAI.create("ChangeMatrix", pbj,null);
+		try{
+			result.getWidth();
+			assertTrue("we should have got an eception as the image types are different!",false);
+		} catch (Exception e) {
+			// fine we get an exception
+		}
+	}
+	
+	@Test
 	public void testFloatTypes(){
 		final Set<Integer> classes = new HashSet<Integer>();
 		classes.add(0);

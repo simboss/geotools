@@ -37,6 +37,7 @@ import javax.media.jai.ROI;
 import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
 
 import com.sun.media.jai.opimage.RIFUtil;
+import com.sun.media.jai.util.ImageUtil;
 
 /**
  * The image factory for the {@link ChangeMatrixOpImage} operation.
@@ -86,6 +87,10 @@ public class ChangeMatrixStatsRIF implements RenderedImageFactory {
         	throw new IllegalArgumentException("Unable to process images with different data type");
         }
         
+        // same size
+        if(now.getWidth()!=reference.getWidth()||now.getHeight()!=reference.getHeight()){
+        	throw new IllegalArgumentException("Unable to process images with different raster dimensions");
+        }
         
         ImageLayout layout = RIFUtil.getImageLayoutHint(renderHints);
         if (layout == null) layout = new ImageLayout();
