@@ -57,19 +57,13 @@ public class ChangeMatrixStatsRIF implements RenderedImageFactory {
      * @param renderHints mostly useless with this image
      */
     public RenderedImage create(ParameterBlock paramBlock, RenderingHints renderHints) {
-        
-        RenderedImage source = paramBlock.getRenderedSource(0);
+
+        RenderedImage reference = paramBlock.getRenderedSource(0);
+        RenderedImage source = paramBlock.getRenderedSource(1);
 
         ImageLayout layout = RIFUtil.getImageLayoutHint(renderHints);
         if (layout == null) layout = new ImageLayout();
 
-        // Reference Image
-        final RenderedImage referenceImage=(RenderedImage) paramBlock.getObjectParameter(ChangeMatrixDescriptor.REFIMAGE_ARG_INDEX);
-
-        
-        // bands
-        int bandSource = paramBlock.getIntParameter(ChangeMatrixDescriptor.BAND_SOURCE_ARG_INDEX);
-        int bandReference = paramBlock.getIntParameter(ChangeMatrixDescriptor.BAND_REFERENCE_ARG_INDEX);
         
         // result
         final ChangeMatrix result= (ChangeMatrix) paramBlock.getObjectParameter(ChangeMatrixDescriptor.RESULT_ARG_INDEX);
@@ -79,11 +73,9 @@ public class ChangeMatrixStatsRIF implements RenderedImageFactory {
 
         return new ChangeMatrixOpImage(
         		source,
-        		referenceImage,
+        		reference,
                 renderHints,
                 layout,
-                bandSource,
-                bandReference,
                 roi,
                 result);
     }

@@ -25,7 +25,6 @@
 
 package org.geotools.process.raster.changematrix;
 
-import java.awt.image.RenderedImage;
 import java.awt.image.renderable.ParameterBlock;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,8 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.media.jai.OperationDescriptorImpl;
 import javax.media.jai.ROI;
 import javax.media.jai.registry.RenderedRegistryMode;
-
-import org.jaitools.numeric.Statistic;
 
 
 /**
@@ -206,33 +203,21 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
 	 */
 	private static final long serialVersionUID = -6996896157854316840L;
 	
-	public static final int BAND_SOURCE_ARG_INDEX = 0;
-	public static final int BAND_REFERENCE_ARG_INDEX = 1;
-	public static final int ROI_ARG_INDEX = 2;
-	public static final int REFIMAGE_ARG_INDEX = 3;
-	public static final int RESULT_ARG_INDEX = 4;
+	public static final int ROI_ARG_INDEX = 0;
+	public static final int RESULT_ARG_INDEX = 1;
 
 	public static final String[] PARAM_NAMES =
-        {"bandSource",
-         "bandReference",
-         "roi",
-         "referenceImage",
+        {"roi",
          "result"
         };
 
     private static final Class[] PARAM_CLASSES =
-        {Integer.class,
-         Integer.class,
-         javax.media.jai.ROI.class,
-         RenderedImage.class,
+        {javax.media.jai.ROI.class,
          ChangeMatrix.class
         };
 
     private static final Object[] PARAM_DEFAULTS =
-        {Integer.valueOf(0),
-         Integer.valueOf(0),         
-         (ROI) null,
-         NO_PARAMETER_DEFAULT,
+        {(ROI) null,
          NO_PARAMETER_DEFAULT};
 
     /** Constructor. */
@@ -244,13 +229,9 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
                     {"Description", "Calculate change matrix between two images"},
                     {"DocURL", "http://www.geotools.org"},
                     {"Version", "1.0.0"},
-                    {"arg0Desc", "band (Integer, default 0) - the source image band to process"},
-                    {"arg1Desc", "band (Integer, default 0) - the reference image band to process"},
-                    {"arg2Desc", "roi (default null) - an optional ROI object for source and/or" +
+                    {"arg0Desc", "roi (default null) - an optional ROI object for source and/or" +
                              "destination masking"},
-                    {"arg3Desc", "RenderedImage (RenderedImage) -" +
-                             "the reference image"},
-                    {"arg4Desc", "result (ChangeMatrix) -" +
+                    {"arg1Desc", "result (ChangeMatrix) -" +
                              "a sparse matrix as a Map holding the count of change pixels"}
                 },
 
@@ -278,28 +259,6 @@ public class ChangeMatrixDescriptor extends OperationDescriptorImpl {
 	@Override
     public boolean validateArguments(String modeName, ParameterBlock pb, StringBuffer msg) {
         if (!super.validateArguments(modeName, pb, msg)) {
-            return false;
-        }
-        // Reference Image
-        final Object o=pb.getObjectParameter(REFIMAGE_ARG_INDEX);
-        RenderedImage referenceImage=null;
-        if(o!=null&&o instanceof RenderedImage){
-        	referenceImage=(RenderedImage) o;
-        } else {
-        	msg.append(" null reference image");
-        	return false;
-        }
-        
-        // bands
-        int band0 = pb.getIntParameter(BAND_SOURCE_ARG_INDEX);
-        int band1 = pb.getIntParameter(BAND_REFERENCE_ARG_INDEX);
-        final int numBands=referenceImage.getSampleModel().getNumBands();
-        if (band0 < 0 || band0 >= numBands) {
-            msg.append("band arg out of bounds for reference image: ").append(band0);
-            return false;
-        }
-        if (band1 < 0 || band1 >= numBands) {
-            msg.append("band arg out of bounds for reference image: ").append(band0);
             return false;
         }
                 
