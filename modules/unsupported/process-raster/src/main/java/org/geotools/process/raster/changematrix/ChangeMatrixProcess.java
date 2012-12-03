@@ -50,27 +50,54 @@ import com.vividsolutions.jts.geom.Geometry;
  */
 @DescribeProcess(title = "ChangeMatrix", description = "The changeMatrix process")
 public class ChangeMatrixProcess implements RasterProcess {
-    /** 
+    /**
      * @param classes representing the domain of the classes (Mandatory, not empty)
      * @param rasterT0 that is the reference Image (Mandatory)
      * @param rasterT1 rasterT1 that is the update situation (Mandatory)
      * @param roi that identifies the optional ROI (so that could be null)
      * @return
      */
-    @DescribeResult(name = "changeMatrix", type=ChangeMatrixOutput.class, description = "the ChangeMatrix")
+    @DescribeResult(name = "changeMatrix", type = ChangeMatrixOutput.class, description = "the ChangeMatrix")
     public ChangeMatrixOutput execute(
-            @DescribeParameter(name = "classes", collectionType=Integer.class, min=1, description = "The domain of the classes used in input rasters") Set<Integer> classes,
-            @DescribeParameter(name = "rasterT0", min=1, description = "Input raster at Time 0") GridCoverage2D rasterT0,
-            @DescribeParameter(name = "rasterT1", min=1, description = "Input raster at Time 1") GridCoverage2D rasterT1,
-            @DescribeParameter(name = "ROI", min=1, description = "Region Of Interest") Geometry roi) throws ProcessException{
-        
-        
-        // implementation...
-        
-        
+            @DescribeParameter(name = "classes", collectionType = Integer.class, min = 1, description = "The domain of the classes used in input rasters") Set<Integer> classes,
+            @DescribeParameter(name = "rasterT0", min = 1, description = "Input raster at Time 0") GridCoverage2D rasterT0,
+            @DescribeParameter(name = "rasterT1", min = 1, description = "Input raster at Time 1") GridCoverage2D rasterT1,
+            @DescribeParameter(name = "ROI", min = 1, description = "Region Of Interest") Geometry roi)
+            throws ProcessException {
+
+        RenderedImage reference = rasterT0.getRenderedImage();
+        RenderedImage source = rasterT1.getRenderedImage();
+
+        ChangeMatrix cm = new ChangeMatrix(classes);
+
+        // TODO Is really needed ???
+        // final ImageLayout layout = new ImageLayout();
+        // layout.setTileHeight(256).setTileWidth(256);
+        // final RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT,
+        // layout);
+
+        final ParameterBlockJAI pbj = new ParameterBlockJAI("ChangeMatrix");
+        pbj.addSource(reference);
+        pbj.addSource(source);
+        pbj.setParameter("result", cm);
+        final RenderedOp result = JAI.create("ChangeMatrix", pbj, null);
+
+        // try to write the resulting image before disposing the sources
+        try {
+            ImageIO.write(result, "tiff", new File(TestData.file(this, "."), "result.tif")/* Where save the file??? */);
+        } catch (FileNotFoundException e) {
+            throw new ProcessException(e.getLocalizedMessage());
+        } catch (IOException e) {
+            throw new ProcessException(e.getLocalizedMessage());
+        }
+
+        result.dispose();
+        ((RenderedOp) source).dispose();
+        ((RenderedOp) reference).dispose();
+
         return getTestMap();
     }
-    
+
     /**
      * @return an hardcoded changeMatrix
      */
@@ -89,7 +116,7 @@ public class ChangeMatrixProcess implements RasterProcess {
         s.add(new ChangeMatrixElement(1, 1, 3192));
         s.add(new ChangeMatrixElement(1, 36, 15));
         s.add(new ChangeMatrixElement(1, 37, 0));
-        
+
         return s;
     }
 }
