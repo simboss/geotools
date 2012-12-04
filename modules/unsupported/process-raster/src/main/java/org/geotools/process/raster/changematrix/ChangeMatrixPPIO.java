@@ -1,39 +1,64 @@
 /*
- *  GeoBatch - Open Source geospatial batch processing system
- *  https://github.com/nfms4redd/nfms-geobatch
- *  Copyright (C) 2007-2012 GeoSolutions S.A.S.
- *  http://www.geo-solutions.it
+ *    GeoTools - The Open Source Java GIS Toolkit
+ *    http://geotools.org
  *
- *  GPLv3 + Classpath exception
+ *    (C) 2011, Open Source Geospatial Foundation (OSGeo)
+ *    (C) 2008-2011 TOPP - www.openplans.org.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU Lesser General Public
+ *    License as published by the Free Software Foundation;
+ *    version 2.1 of the License.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    Lesser General Public License for more details.
  */
 package org.geotools.process.raster.changematrix;
 
-import org.geoserver.wps.ppio.XStreamPPIO;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+
+import net.sf.json.JSONSerializer;
+
+import org.geoserver.wps.ppio.CDataPPIO;
 
 /**
  * @author DamianoG
- *
+ * 
  */
-public class ChangeMatrixPPIO extends XStreamPPIO{
+public class ChangeMatrixPPIO extends CDataPPIO {
 
-    /**
-     * @param type
+    public ChangeMatrixPPIO() {
+        super(ChangeMatrixOutput.class, ChangeMatrixOutput.class, "application/json");
+    }
+
+    @Override
+    public Object decode(InputStream input) throws Exception {
+        return null;
+    }
+
+    @Override
+    public void encode(Object value, OutputStream os) throws Exception {
+        PrintWriter pw = new PrintWriter(os);
+        pw.write(JSONSerializer.toJSON(((ChangeMatrixOutput)value).getChangeMatrix()).toString());
+        pw.close();
+        os.close();
+    }
+
+    @Override
+    public String getFileExtension() {
+        return "json";
+    }
+
+    /* (non-Javadoc)
+     * @see org.geoserver.wps.ppio.CDataPPIO#decode(java.lang.String)
      */
-    protected ChangeMatrixPPIO() {
-        super(ChangeMatrixOutput.class);
+    @Override
+    public Object decode(String input) throws Exception {
+        return null;
     }
 
 }
