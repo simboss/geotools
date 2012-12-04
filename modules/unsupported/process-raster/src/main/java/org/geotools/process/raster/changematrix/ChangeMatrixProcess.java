@@ -17,7 +17,12 @@
  */
 package org.geotools.process.raster.changematrix;
 
+import java.awt.image.RenderedImage;
 import java.util.Set;
+
+import javax.media.jai.JAI;
+import javax.media.jai.ParameterBlockJAI;
+import javax.media.jai.RenderedOp;
 
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.process.ProcessException;
@@ -25,6 +30,7 @@ import org.geotools.process.factory.DescribeParameter;
 import org.geotools.process.factory.DescribeProcess;
 import org.geotools.process.factory.DescribeResult;
 import org.geotools.process.raster.RasterProcess;
+import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
 
 import com.vividsolutions.jts.geom.Geometry;
 
@@ -36,6 +42,9 @@ import com.vividsolutions.jts.geom.Geometry;
  */
 @DescribeProcess(title = "ChangeMatrix", description = "The changeMatrix process")
 public class ChangeMatrixProcess implements RasterProcess {
+
+    public static String CHANGE_MATRIX_DEBUG_MODE = "CHANGE_MATRIX_DEBUG_MODE";
+
     /**
      * @param classes representing the domain of the classes (Mandatory, not empty)
      * @param rasterT0 that is the reference Image (Mandatory)
@@ -48,45 +57,76 @@ public class ChangeMatrixProcess implements RasterProcess {
             @DescribeParameter(name = "classes", collectionType = Integer.class, min = 1, description = "The domain of the classes used in input rasters") Set<Integer> classes,
             @DescribeParameter(name = "rasterT0", min = 1, description = "Input raster at Time 0") GridCoverage2D rasterT0,
             @DescribeParameter(name = "rasterT1", min = 1, description = "Input raster at Time 1") GridCoverage2D rasterT1,
-            @DescribeParameter(name = "ROI", min=0, description = "Region Of Interest") Geometry roi)
-            
-            throws ProcessException {
+            @DescribeParameter(name = "ROI", min = 0, description = "Region Of Interest") Geometry roi)
 
-//        RenderedImage reference = rasterT0.getRenderedImage();
-//        RenderedImage source = rasterT1.getRenderedImage();
-//
-//        ChangeMatrix cm = new ChangeMatrix(classes);
-//
-//        // TODO Is really needed ???
-//        // final ImageLayout layout = new ImageLayout();
-//        // layout.setTileHeight(256).setTileWidth(256);
-//        // final RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT,
-//        // layout);
-//
-//        final ParameterBlockJAI pbj = new ParameterBlockJAI("ChangeMatrix");
-//        pbj.addSource(reference);
-//        pbj.addSource(source);
-//        pbj.setParameter("result", cm);
-//        final RenderedOp result = JAI.create("ChangeMatrix", pbj, null);
-//
-//        // try to write the resulting image before disposing the sources
-//        try {
-//            ImageIO.write(result, "tiff", new File(TestData.file(this, "."), "result.tif")/* Where save the file??? */);
-//        } catch (FileNotFoundException e) {
-//            throw new ProcessException(e.getLocalizedMessage());
-//        } catch (IOException e) {
-//            throw new ProcessException(e.getLocalizedMessage());
-//        }
-//
-//        result.dispose();
-//        ((RenderedOp) source).dispose();
-//        ((RenderedOp) reference).dispose();
+    throws ProcessException {
 
-        return getTestMap();
+        // handle the debug mode
+        String change_matrix_debug_mode = System.getProperty(CHANGE_MATRIX_DEBUG_MODE);
+        if (change_matrix_debug_mode != null && change_matrix_debug_mode.equals("on")) {
+            return getTestMap();
+        }
+
+        RenderedImage reference = rasterT0.getRenderedImage();
+        RenderedImage source = rasterT1.getRenderedImage();
+
+        ChangeMatrix cm = new ChangeMatrix(classes);
+
+        // TODO Is really needed ???
+        // final ImageLayout layout = new ImageLayout();
+        // layout.setTileHeight(256).setTileWidth(256);
+        // final RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT,
+        // layout);
+
+        final ParameterBlockJAI pbj = new ParameterBlockJAI("ChangeMatrix");
+        pbj.addSource(reference);
+        pbj.addSource(source);
+        pbj.setParameter("result", cm);
+        // TODO handle Region Of Interest
+        // pbj.setParameter("ROI", roi);
+        final RenderedOp result = JAI.create("ChangeMatrix", pbj, null);
+
+        // TODO try to write the resulting image before disposing the sources, maybe better create a new geoserver layer
+        // try {
+        // ImageIO.write(result, "tiff", new File("XXXXX")/* TODO Where save the file??? */);
+        // } catch (FileNotFoundException e) {
+        // throw new ProcessException(e.getLocalizedMessage());
+        // } catch (IOException e) {
+        // throw new ProcessException(e.getLocalizedMessage());
+        // }
+
+        result.dispose();
+        // TODO Is needed to dispose the rendered image?
+        ((RenderedOp) source).dispose();
+        ((RenderedOp) reference).dispose();
+
+        return buildChangeMatrixOutput(cm, classes);
     }
 
     /**
-     * @return an hardcoded changeMatrix
+     * A Utility Method to trasform the ChangeMatrix into ChangeMatrixOutput, the type returned by the Service.
+     * 
+     * @param cm The changeMatrix
+     * @param classes the classes used to create the changeMatrix
+     * @return a ChangeMatrixOutput instance
+     */
+    private ChangeMatrixOutput buildChangeMatrixOutput(ChangeMatrix cm, Set<Integer> classes) {
+
+        ChangeMatrixOutput cmo = new ChangeMatrixOutput();
+        for (Integer elRef : classes) {
+            for (Integer elNow : classes) {
+                if (!elRef.equals(elRef)) {
+                    ChangeMatrixElement cme = new ChangeMatrixElement(elRef, elNow,
+                            (int) cm.retrievePairOccurrences(elRef, elNow));
+                    cmo.add(cme);
+                }
+            }
+        }
+        return cmo;
+    }
+
+    /**
+     * @return an hardcoded ChangeMatrixOutput usefull for testing
      */
     private static ChangeMatrixOutput getTestMap() {
 
@@ -109,19 +149,20 @@ public class ChangeMatrixProcess implements RasterProcess {
         s.add(new ChangeMatrixElement(35, 1, 0));
         s.add(new ChangeMatrixElement(35, 36, 0));
         s.add(new ChangeMatrixElement(35, 37, 16));
-        
+
         s.add(new ChangeMatrixElement(36, 0, 166));
         s.add(new ChangeMatrixElement(36, 35, 36));
         s.add(new ChangeMatrixElement(36, 1, 117));
         s.add(new ChangeMatrixElement(36, 36, 1273887));
         s.add(new ChangeMatrixElement(36, 37, 11976));
-        
+
         s.add(new ChangeMatrixElement(37, 0, 274));
         s.add(new ChangeMatrixElement(37, 35, 16));
         s.add(new ChangeMatrixElement(37, 1, 16));
         s.add(new ChangeMatrixElement(37, 36, 28710));
         s.add(new ChangeMatrixElement(37, 37, 346154));
-        
+
         return s;
     }
+
 }
