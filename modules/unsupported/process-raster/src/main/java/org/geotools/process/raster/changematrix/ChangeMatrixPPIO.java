@@ -23,10 +23,11 @@ import java.io.PrintWriter;
 
 import net.sf.json.JSONSerializer;
 
+import org.apache.commons.io.IOUtils;
 import org.geoserver.wps.ppio.CDataPPIO;
 
 /**
- * @author DamianoG
+ * @author Damiano Giampaoli, GeoSolutions SAS
  * 
  */
 public class ChangeMatrixPPIO extends CDataPPIO {
@@ -43,9 +44,13 @@ public class ChangeMatrixPPIO extends CDataPPIO {
     @Override
     public void encode(Object value, OutputStream os) throws Exception {
         PrintWriter pw = new PrintWriter(os);
-        pw.write(JSONSerializer.toJSON(((ChangeMatrixOutput)value).getChangeMatrix()).toString());
-        pw.close();
-        os.close();
+        try{
+
+            pw.write(JSONSerializer.toJSON(((ChangeMatrixOutput)value).getChangeMatrix()).toString());
+        } finally{
+        	IOUtils.closeQuietly(pw);
+        	IOUtils.closeQuietly(os);
+        }
     }
 
     @Override
