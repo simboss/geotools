@@ -43,7 +43,9 @@ import com.vividsolutions.jts.geom.Geometry;
 @DescribeProcess(title = "ChangeMatrix", description = "The changeMatrix process")
 public class ChangeMatrixProcess implements RasterProcess {
 
-    public static String CHANGE_MATRIX_DEBUG_MODE = "CHANGE_MATRIX_DEBUG_MODE";
+    public final static String CHANGE_MATRIX_DEBUG_MODE = "CHANGE_MATRIX_DEBUG_MODE";
+    
+    public final static boolean debugmode=Boolean.getBoolean(CHANGE_MATRIX_DEBUG_MODE);
 
     /**
      * @param classes representing the domain of the classes (Mandatory, not empty)
@@ -53,7 +55,7 @@ public class ChangeMatrixProcess implements RasterProcess {
      * @return
      */
     @DescribeResult(name = "changeMatrix", description = "the ChangeMatrix")
-    public ChangeMatrixOutput execute(
+    public ChangeMatrixDTO execute(
             @DescribeParameter(name = "classes", collectionType = Integer.class, min = 1, description = "The domain of the classes used in input rasters") Set<Integer> classes,
             @DescribeParameter(name = "rasterT0", min = 1, description = "Input raster at Time 0") GridCoverage2D rasterT0,
             @DescribeParameter(name = "rasterT1", min = 1, description = "Input raster at Time 1") GridCoverage2D rasterT1,
@@ -62,8 +64,7 @@ public class ChangeMatrixProcess implements RasterProcess {
     throws ProcessException {
 
         // handle the debug mode
-        String change_matrix_debug_mode = System.getProperty(CHANGE_MATRIX_DEBUG_MODE);
-        if (change_matrix_debug_mode != null && change_matrix_debug_mode.equals("on")) {
+        if (debugmode) {
             return getTestMap();
         }
 
@@ -110,9 +111,9 @@ public class ChangeMatrixProcess implements RasterProcess {
      * @param classes the classes used to create the changeMatrix
      * @return a ChangeMatrixOutput instance
      */
-    private ChangeMatrixOutput buildChangeMatrixOutput(ChangeMatrix cm, Set<Integer> classes) {
+    private ChangeMatrixDTO buildChangeMatrixOutput(ChangeMatrix cm, Set<Integer> classes) {
 
-        ChangeMatrixOutput cmo = new ChangeMatrixOutput();
+        ChangeMatrixDTO cmo = new ChangeMatrixDTO();
         for (Integer elRef : classes) {
             for (Integer elNow : classes) {
                 if (!elRef.equals(elRef)) {
@@ -128,9 +129,9 @@ public class ChangeMatrixProcess implements RasterProcess {
     /**
      * @return an hardcoded ChangeMatrixOutput usefull for testing
      */
-    private static ChangeMatrixOutput getTestMap() {
+    private static final ChangeMatrixDTO getTestMap() {
 
-        ChangeMatrixOutput s = new ChangeMatrixOutput();
+        ChangeMatrixDTO s = new ChangeMatrixDTO();
 
         s.add(new ChangeMatrixElement(0, 0, 16002481));
         s.add(new ChangeMatrixElement(0, 35, 0));
