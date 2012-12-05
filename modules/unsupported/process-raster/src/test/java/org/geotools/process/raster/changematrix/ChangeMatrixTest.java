@@ -1,6 +1,7 @@
 package org.geotools.process.raster.changematrix;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -16,6 +17,7 @@ import javax.imageio.ImageIO;
 import javax.media.jai.ImageLayout;
 import javax.media.jai.JAI;
 import javax.media.jai.ParameterBlockJAI;
+import javax.media.jai.ROIShape;
 import javax.media.jai.RenderedOp;
 import javax.media.jai.operator.ConstantDescriptor;
 
@@ -23,6 +25,7 @@ import junit.framework.Assert;
 
 import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
 import org.geotools.test.TestData;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChangeMatrixTest extends Assert {
@@ -182,6 +185,7 @@ public void testDoubleTypes() {
 }
 
 @Test
+@Ignore
 public void completeTestByteDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();
@@ -279,6 +283,103 @@ public void completeTestByteDatatype() throws Exception {
 }
 
 @Test
+public void testROI() throws Exception {
+
+    final Set<Integer> classes = new HashSet<Integer>();
+    classes.add(0);
+    classes.add(1);
+    classes.add(35);
+    classes.add(36);
+    classes.add(37);
+    final ChangeMatrix cm = new ChangeMatrix(classes);
+
+    final RenderedOp source = JAI.create("ImageRead",
+            TestData.file(this, "clc2006_L3_100m_small.tif"));// new
+                                                              // File("d:/data/unina/clc2006_L3_100m.tif"));
+    final RenderedOp reference = JAI.create("ImageRead",
+            TestData.file(this, "clc2000_L3_100m_small.tif"));// new
+                                                              // File("d:/data/unina/clc2000_L3_100m.tif"));
+    
+    // create roi
+    final Rectangle roi=new Rectangle(reference.getBounds());
+    roi.setBounds(roi.x, roi.y, roi.width/2, roi.height/2);
+
+    final ImageLayout layout = new ImageLayout();
+    layout.setTileHeight(512).setTileWidth(512);
+    final RenderingHints hints = new RenderingHints(JAI.KEY_IMAGE_LAYOUT,
+            layout);
+    final ParameterBlockJAI pbj = new ParameterBlockJAI("ChangeMatrix");
+    pbj.addSource(reference);
+    pbj.addSource(source);
+    pbj.setParameter("result", cm);
+    pbj.setParameter("roi",new ROIShape(roi));
+    final RenderedOp result = JAI.create("ChangeMatrix", pbj, hints);
+    result.getWidth();
+
+    // force computation
+    final Queue<Point> tiles = new ArrayBlockingQueue<Point>(
+            result.getNumXTiles() * result.getNumYTiles());
+    for (int i = 0; i < result.getNumXTiles(); i++) {
+        for (int j = 0; j < result.getNumYTiles(); j++) {
+            tiles.add(new Point(i, j));
+        }
+    }
+    final CountDownLatch sem = new CountDownLatch(result.getNumXTiles()
+            * result.getNumYTiles());
+    ExecutorService ex = Executors.newFixedThreadPool(10);
+    for (final Point tile : tiles) {
+        ex.execute(new Runnable() {
+
+            @Override
+            public void run() {
+                result.getTile(tile.x, tile.y);
+                sem.countDown();
+            }
+        });
+    }
+    sem.await();
+    cm.freeze(); // stop changing the computations! If we did not do this new
+                 // values would be accumulated as the file was written
+
+    // try to write the resulting image before disposing the sources
+    ImageIO.write(result, "tiff", new File(TestData.file(this, "."),
+            "result.tif"));
+
+    result.dispose();
+    source.dispose();
+    reference.dispose();
+
+    // check values of the change matrix
+    assertEquals(14700, cm.retrievePairOccurrences(0, 0));
+    assertEquals(0, cm.retrievePairOccurrences(0, 35));
+    assertEquals(0, cm.retrievePairOccurrences(0, 1));
+    assertEquals(0, cm.retrievePairOccurrences(0, 36));
+    assertEquals(0, cm.retrievePairOccurrences(0, 37));
+    assertEquals(0, cm.retrievePairOccurrences(35, 0));
+    assertEquals(0, cm.retrievePairOccurrences(35, 35));
+    assertEquals(0, cm.retrievePairOccurrences(35, 1));
+    assertEquals(0, cm.retrievePairOccurrences(35, 36));
+    assertEquals(0, cm.retrievePairOccurrences(35, 37));
+    assertEquals(0, cm.retrievePairOccurrences(1, 0));
+    assertEquals(0, cm.retrievePairOccurrences(1, 35));
+    assertEquals(9, cm.retrievePairOccurrences(1, 1));
+    assertEquals(1, cm.retrievePairOccurrences(1, 36));
+    assertEquals(0, cm.retrievePairOccurrences(1, 37));
+    assertEquals(0, cm.retrievePairOccurrences(36, 0));
+    assertEquals(0, cm.retrievePairOccurrences(36, 35));
+    assertEquals(1, cm.retrievePairOccurrences(36, 1));
+    assertEquals(3625, cm.retrievePairOccurrences(36, 36));
+    assertEquals(24, cm.retrievePairOccurrences(36, 37));
+    assertEquals(0, cm.retrievePairOccurrences(37, 0));
+    assertEquals(0, cm.retrievePairOccurrences(37, 35));
+    assertEquals(0, cm.retrievePairOccurrences(37, 1));
+    assertEquals(47, cm.retrievePairOccurrences(37, 36));
+    assertEquals(889, cm.retrievePairOccurrences(37, 37));
+
+}
+
+@Test
+@Ignore
 public void completeTestShortDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();
@@ -377,6 +478,7 @@ public void completeTestShortDatatype() throws Exception {
 }
 
 @Test
+@Ignore
 public void completeTestIntDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();

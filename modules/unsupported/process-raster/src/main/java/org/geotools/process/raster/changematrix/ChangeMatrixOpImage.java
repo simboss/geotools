@@ -28,6 +28,7 @@ import javax.media.jai.AreaOpImage;
 import javax.media.jai.ImageLayout;
 import javax.media.jai.PointOpImage;
 import javax.media.jai.ROI;
+import javax.media.jai.ROIShape;
 import javax.media.jai.RasterAccessor;
 import javax.media.jai.RasterFormatTag;
 
@@ -41,11 +42,12 @@ import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMat
  * @author Simone Giannecchini, GeoSolutions SAS
  * @since 9.0
  */
+@SuppressWarnings("unchecked")
 public class ChangeMatrixOpImage extends PointOpImage {
 
-private ROI roi;
+private final ROI roi;
 
-private ChangeMatrix result;
+private final ChangeMatrix result;
 
 /**
  * Creates a new instance.
@@ -64,8 +66,9 @@ private ChangeMatrix result;
  * @see ChangeMatrixDescriptor
  * @see ChangeMatrix
  */
-public ChangeMatrixOpImage(RenderedImage reference, RenderedImage now,
-        Map config, ImageLayout layout, ROI roi, ChangeMatrix result) {
+@SuppressWarnings("rawtypes")
+public ChangeMatrixOpImage(final RenderedImage reference, final RenderedImage now,
+        final Map config, final ImageLayout layout, ROI roi, final ChangeMatrix result) {
 
     super(reference, now, layout, config, true);
 
@@ -74,13 +77,15 @@ public ChangeMatrixOpImage(RenderedImage reference, RenderedImage now,
     this.roi = roi;
     if (roi != null) {
         // check that the ROI contains the source image bounds
-        Rectangle sourceBounds = new Rectangle(now.getMinX(), now.getMinY(),
+        final Rectangle sourceBounds = new Rectangle(now.getMinX(), now.getMinY(),
                 now.getWidth(), now.getHeight());
 
-        if (!roi.getBounds().contains(sourceBounds)) {
+        if (!roi.intersects(sourceBounds)) {
             throw new IllegalArgumentException(
-                    "The bounds of the ROI must contain the source image");
+                    "The bounds of the ROI must intersect the source image");
         }
+        // massage roi
+        roi= roi.intersect(new ROIShape(sourceBounds));
     }
 
     // where do we put the final elements?
@@ -95,38 +100,39 @@ public ChangeMatrixOpImage(RenderedImage reference, RenderedImage now,
  * @param dest The tile containing the rectangle to be computed.
  * @param destRect The rectangle within the tile to be computed.
  */
-protected void computeRect(Raster[] sources, WritableRaster dest,
-        Rectangle destRect) {
+protected void computeRect(final Raster[] sources, final WritableRaster dest,
+        final Rectangle destRect) {
     // Retrieve format tags.
-    RasterFormatTag[] formatTags = getFormatTags();
+    final RasterFormatTag[] formatTags = getFormatTags();
 
     /* For PointOpImage, srcRect = destRect. */
-    RasterAccessor s1 = new RasterAccessor(sources[0], destRect, formatTags[0],
+    final RasterAccessor s1 = new RasterAccessor(sources[0], destRect, formatTags[0],
             getSourceImage(0).getColorModel());
-    RasterAccessor s2 = new RasterAccessor(sources[1], destRect, formatTags[1],
+    final RasterAccessor s2 = new RasterAccessor(sources[1], destRect, formatTags[1],
             getSourceImage(1).getColorModel());
-    RasterAccessor d = new RasterAccessor(dest, destRect, formatTags[2],
+    final RasterAccessor d = new RasterAccessor(dest, destRect, formatTags[2],
             getColorModel());
     
-    int src1LineStride = s1.getScanlineStride();
-    int src1PixelStride = s1.getPixelStride();
-    int[] src1BandOffsets = s1.getBandOffsets();
+    final int src1LineStride = s1.getScanlineStride();
+    final int src1PixelStride = s1.getPixelStride();
+    final int[] src1BandOffsets = s1.getBandOffsets();
 
-    int src2LineStride = s2.getScanlineStride();
-    int src2PixelStride = s2.getPixelStride();
-    int[] src2BandOffsets = s2.getBandOffsets();
+    final int src2LineStride = s2.getScanlineStride();
+    final int src2PixelStride = s2.getPixelStride();
+    final int[] src2BandOffsets = s2.getBandOffsets();
 
-    int dstNumBands = d.getNumBands();
-    int dstWidth = d.getWidth();
-    int dstHeight = d.getHeight();
-    int dstLineStride = d.getScanlineStride();
-    int dstPixelStride = d.getPixelStride();
-    int[] dstBandOffsets = d.getBandOffsets();
+    final int dstNumBands = d.getNumBands();
+    final int dstWidth = d.getWidth();
+    final int dstHeight = d.getHeight();
+    final int dstLineStride = d.getScanlineStride();
+    final int dstPixelStride = d.getPixelStride();
+    final int[] dstBandOffsets = d.getBandOffsets();
 
     switch (s1.getDataType()) {
 
     case DataBuffer.TYPE_BYTE:
-        byteLoop(dstNumBands, dstWidth, dstHeight, src1LineStride,
+        byteLoop(dstNumBands, dstWidth, dstHeight,sources[0].getMinX(),
+        		sources[0].getMinY(), src1LineStride,
                 src1PixelStride, src1BandOffsets, s1.getByteDataArrays(),
                 src2LineStride, src2PixelStride, src2BandOffsets,
                 s2.getByteDataArrays(), dstLineStride, dstPixelStride,
@@ -135,7 +141,8 @@ protected void computeRect(Raster[] sources, WritableRaster dest,
 
     case DataBuffer.TYPE_USHORT:
     case DataBuffer.TYPE_SHORT:
-        shortLoop(dstNumBands, dstWidth, dstHeight, src1LineStride,
+        shortLoop(dstNumBands, dstWidth, dstHeight,sources[0].getMinX(),
+        		sources[0].getMinY(),  src1LineStride,
                 src1PixelStride, src1BandOffsets, s1.getShortDataArrays(),
                 src2LineStride, src2PixelStride, src2BandOffsets,
                 s2.getShortDataArrays(), dstLineStride, dstPixelStride,
@@ -143,27 +150,27 @@ protected void computeRect(Raster[] sources, WritableRaster dest,
         break;
 
     case DataBuffer.TYPE_INT:
-        intLoop(dstNumBands, dstWidth, dstHeight, src1LineStride,
+        intLoop(dstNumBands, dstWidth, dstHeight, sources[0].getMinX(),
+        		sources[0].getMinY(), src1LineStride,
                 src1PixelStride, src1BandOffsets, s1.getIntDataArrays(),
                 src2LineStride, src2PixelStride, src2BandOffsets,
                 s2.getIntDataArrays(), dstLineStride, dstPixelStride,
                 dstBandOffsets, d.getIntDataArrays());
         break;
     }
-
     d.copyBinaryDataToRaster();
 }
 
-private void intLoop(int dstNumBands, int dstWidth, int dstHeight,
-        int src1LineStride, int src1PixelStride, int[] src1BandOffsets,
-        int[][] src1Data, int src2LineStride, int src2PixelStride,
-        int[] src2BandOffsets, int[][] src2Data, int dstLineStride,
-        int dstPixelStride, int[] dstBandOffsets, int[][] dstData) {
+private void intLoop(final int dstNumBands, final int dstWidth, final int dstHeight,final int src1MinX, final int src1MinY,
+        final int src1LineStride, final int src1PixelStride, final int[] src1BandOffsets,
+        final int[][] src1Data, final int src2LineStride, final int src2PixelStride,
+        final int[] src2BandOffsets, final int[][] src2Data, final int dstLineStride,
+        final int dstPixelStride, final int[] dstBandOffsets, final int[][] dstData) {
 
     for (int b = 0; b < dstNumBands; b++) {
-        int[] s1 = src1Data[b];
-        int[] s2 = src2Data[b];
-        int[] d = dstData[b];
+        final int[] s1 = src1Data[b];
+        final int[] s2 = src2Data[b];
+        final int[] d = dstData[b];
         int src1LineOffset = src1BandOffsets[b];
         int src2LineOffset = src2BandOffsets[b];
         int dstLineOffset = dstBandOffsets[b];
@@ -179,10 +186,16 @@ private void intLoop(int dstNumBands, int dstWidth, int dstHeight,
             for (int w = 0; w < dstWidth; w++) {
                 final int before = (s1[src1PixelOffset]);
                 final int after = (s2[src1PixelOffset]);
-                d[dstPixelOffset] = before == after ? 0 : 1;
-                // if(roi==null||roi.contains(x, y)){
-                result.registerPair(before, after);
-                // }
+                d[dstPixelOffset] = before == after ? 0 : 1;             
+                final int x=src1MinX+(src1PixelOffset%src1LineStride)/src1PixelStride;
+                final int y=src1MinY+(src1PixelOffset/src1LineStride);
+                if(roi==null||roi.contains(x, y)){
+                	result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
+                	
+                } else {
+                	// we of course use 0 as NoData
+                	d[dstPixelOffset] =(byte) 0;
+                }
 
                 src1PixelOffset += src1PixelStride;
                 src2PixelOffset += src2PixelStride;
@@ -192,16 +205,16 @@ private void intLoop(int dstNumBands, int dstWidth, int dstHeight,
     }
 }
 
-private void byteLoop(int dstNumBands, int dstWidth, int dstHeight,
-        int src1LineStride, int src1PixelStride, int[] src1BandOffsets,
-        byte[][] src1Data, int src2LineStride, int src2PixelStride,
-        int[] src2BandOffsets, byte[][] src2Data, int dstLineStride,
-        int dstPixelStride, int[] dstBandOffsets, byte[][] dstData) {
+private void byteLoop(final int dstNumBands, final int dstWidth, final int dstHeight,final int src1MinX, final int src1MinY,
+        final int src1LineStride, final int src1PixelStride, final int[] src1BandOffsets,
+        final byte[][] src1Data, final int src2LineStride, final int src2PixelStride,
+        final int[] src2BandOffsets, final byte[][] src2Data, final int dstLineStride,
+        final int dstPixelStride, final int[] dstBandOffsets, final byte[][] dstData) {
 
     for (int b = 0; b < dstNumBands; b++) {
-        byte[] s1 = src1Data[b];
-        byte[] s2 = src2Data[b];
-        byte[] d = dstData[b];
+        final byte[] s1 = src1Data[b];
+        final byte[] s2 = src2Data[b];
+        final byte[] d = dstData[b];
         int src1LineOffset = src1BandOffsets[b];
         int src2LineOffset = src2BandOffsets[b];
         int dstLineOffset = dstBandOffsets[b];
@@ -218,9 +231,16 @@ private void byteLoop(int dstNumBands, int dstWidth, int dstHeight,
                 final byte before = (byte) (s1[src1PixelOffset]);
                 final byte after = (byte) (s2[src1PixelOffset]);
                 d[dstPixelOffset] = before == after ? (byte) 0 : (byte) 1;
-                // if(roi==null||roi.contains(x, y)){
-                result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
-                // }
+                
+                final int x=src1MinX+(src1PixelOffset%src1LineStride)/src1PixelStride;
+                final int y=src1MinY+(src1PixelOffset/src1LineStride);
+                if(roi==null||roi.contains(x, y)){
+                	result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
+                	
+                } else {
+                	// we of course use 0 as NoData
+                	d[dstPixelOffset] =(byte) 0;
+                }
                 src1PixelOffset += src1PixelStride;
                 src2PixelOffset += src2PixelStride;
                 dstPixelOffset += dstPixelStride;
@@ -229,16 +249,16 @@ private void byteLoop(int dstNumBands, int dstWidth, int dstHeight,
     }
 }
 
-private void shortLoop(int dstNumBands, int dstWidth, int dstHeight,
-        int src1LineStride, int src1PixelStride, int[] src1BandOffsets,
-        short[][] src1Data, int src2LineStride, int src2PixelStride,
-        int[] src2BandOffsets, short[][] src2Data, int dstLineStride,
-        int dstPixelStride, int[] dstBandOffsets, short[][] dstData) {
+private void shortLoop(final int dstNumBands, final int dstWidth, final int dstHeight,final int src1MinX, final int src1MinY,
+        final int src1LineStride, final int src1PixelStride, final int[] src1BandOffsets,
+        final short[][] src1Data, final int src2LineStride, final int src2PixelStride,
+        final int[] src2BandOffsets, final short[][] src2Data, final int dstLineStride,
+        final int dstPixelStride, final int[] dstBandOffsets, final short[][] dstData) {
 
     for (int b = 0; b < dstNumBands; b++) {
-        short[] s1 = src1Data[b];
-        short[] s2 = src2Data[b];
-        short[] d = dstData[b];
+        final short[] s1 = src1Data[b];
+        final short[] s2 = src2Data[b];
+        final short[] d = dstData[b];
         int src1LineOffset = src1BandOffsets[b];
         int src2LineOffset = src2BandOffsets[b];
         int dstLineOffset = dstBandOffsets[b];
@@ -254,10 +274,16 @@ private void shortLoop(int dstNumBands, int dstWidth, int dstHeight,
             for (int w = 0; w < dstWidth; w++) {
                 final short before = (short) (s1[src1PixelOffset]);
                 final short after = (short) (s2[src1PixelOffset]);
-                d[dstPixelOffset] = before == after ? (short) 0 : (short) 1;
-                // if(roi==null||roi.contains(x, y)){
-                result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
-                // }
+                d[dstPixelOffset] = before == after ? (short) 0 : (short) 1;          
+                final int x=src1MinX+(src1PixelOffset%src1LineStride)/src1PixelStride;
+                final int y=src1MinY+(src1PixelOffset/src1LineStride);
+                if(roi==null||roi.contains(x, y)){
+                	result.registerPair(s1[src1PixelOffset], s2[src2PixelOffset]);
+                	
+                } else {
+                	// we of course use 0 as NoData
+                	d[dstPixelOffset] =(byte) 0;
+                }
                 src1PixelOffset += src1PixelStride;
                 src2PixelOffset += src2PixelStride;
                 dstPixelOffset += dstPixelStride;

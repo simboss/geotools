@@ -68,10 +68,9 @@ public class ChangeMatrixProcess implements RasterProcess {
             return getTestMap();
         }
 
-        RenderedImage reference = rasterT0.getRenderedImage();
-        RenderedImage source = rasterT1.getRenderedImage();
-
-        ChangeMatrix cm = new ChangeMatrix(classes);
+        final RenderedImage reference = rasterT0.getRenderedImage();
+        final RenderedImage source = rasterT1.getRenderedImage();
+        final ChangeMatrix cm = new ChangeMatrix(classes);
 
         // TODO Is really needed ???
         // final ImageLayout layout = new ImageLayout();
@@ -91,40 +90,20 @@ public class ChangeMatrixProcess implements RasterProcess {
         // try {
         // ImageIO.write(result, "tiff", new File("XXXXX")/* TODO Where save the file??? */);
         // } catch (FileNotFoundException e) {
-        // throw new ProcessException(e.getLocalizedMessage());
+        // throw new ProcessException(e.getLoc	alizedMessage());
         // } catch (IOException e) {
         // throw new ProcessException(e.getLocalizedMessage());
         // }
-
+        result.getTiles(); // this loads the result!
         result.dispose();
         // TODO Is needed to dispose the rendered image?
         ((RenderedOp) source).dispose();
         ((RenderedOp) reference).dispose();
 
-        return buildChangeMatrixOutput(cm, classes);
+        return new ChangeMatrixDTO(cm, classes);
     }
 
-    /**
-     * A Utility Method to trasform the ChangeMatrix into ChangeMatrixOutput, the type returned by the Service.
-     * 
-     * @param cm The changeMatrix
-     * @param classes the classes used to create the changeMatrix
-     * @return a ChangeMatrixOutput instance
-     */
-    private ChangeMatrixDTO buildChangeMatrixOutput(ChangeMatrix cm, Set<Integer> classes) {
 
-        ChangeMatrixDTO cmo = new ChangeMatrixDTO();
-        for (Integer elRef : classes) {
-            for (Integer elNow : classes) {
-                if (!elRef.equals(elRef)) {
-                    ChangeMatrixElement cme = new ChangeMatrixElement(elRef, elNow,
-                            (int) cm.retrievePairOccurrences(elRef, elNow));
-                    cmo.add(cme);
-                }
-            }
-        }
-        return cmo;
-    }
 
     /**
      * @return an hardcoded ChangeMatrixOutput usefull for testing
