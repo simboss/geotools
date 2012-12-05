@@ -25,7 +25,6 @@ import junit.framework.Assert;
 
 import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
 import org.geotools.test.TestData;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class ChangeMatrixTest extends Assert {
@@ -185,7 +184,7 @@ public void testDoubleTypes() {
 }
 
 @Test
-@Ignore
+//@Ignore
 public void completeTestByteDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();
@@ -379,7 +378,7 @@ public void testROI() throws Exception {
 }
 
 @Test
-@Ignore
+//@Ignore
 public void completeTestShortDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();
@@ -478,7 +477,7 @@ public void completeTestShortDatatype() throws Exception {
 }
 
 @Test
-@Ignore
+//@Ignore
 public void completeTestIntDatatype() throws Exception {
 
     final Set<Integer> classes = new HashSet<Integer>();
