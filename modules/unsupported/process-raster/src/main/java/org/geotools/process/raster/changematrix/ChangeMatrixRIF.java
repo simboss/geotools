@@ -36,10 +36,10 @@ import com.sun.media.jai.opimage.RIFUtil;
  * @author Simone Giannecchini, GeoSolutions SAS
  * @since 9.0
  */
-public class ChangeMatrixStatsRIF implements RenderedImageFactory {
+public class ChangeMatrixRIF implements RenderedImageFactory {
 
 /** Constructor */
-public ChangeMatrixStatsRIF() {
+public ChangeMatrixRIF() {
 }
 
 /**
