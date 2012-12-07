@@ -17,6 +17,7 @@
  */
 package org.geotools.process.raster.changematrix;
 
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.image.DataBuffer;
 import java.awt.image.RenderedImage;
@@ -24,7 +25,9 @@ import java.awt.image.renderable.ParameterBlock;
 import java.awt.image.renderable.RenderedImageFactory;
 
 import javax.media.jai.ImageLayout;
+import javax.media.jai.PlanarImage;
 import javax.media.jai.ROI;
+import javax.media.jai.ROIShape;
 
 import org.geotools.process.raster.changematrix.ChangeMatrixDescriptor.ChangeMatrix;
 
@@ -98,8 +101,26 @@ public RenderedImage create(ParameterBlock paramBlock,
     final ChangeMatrix result = (ChangeMatrix) paramBlock
             .getObjectParameter(ChangeMatrixDescriptor.RESULT_ARG_INDEX);
 
-    ROI roi = (ROI) paramBlock
-            .getObjectParameter(ChangeMatrixDescriptor.ROI_ARG_INDEX);
+    // checks on ROI
+    ROI roi = (ROI) paramBlock.getObjectParameter(ChangeMatrixDescriptor.ROI_ARG_INDEX);
+    if (roi != null) {
+        // ok, does the ROI intersects the reference image? if not we should throw an error
+        final Rectangle bounds = PlanarImage.wrapRenderedImage(reference).getBounds();
+        if (!roi.intersects(bounds)) {
+            throw new IllegalArgumentException("ROI does not intersect reference image");
+        } else {
+            // in case the ROI intersect the reference image, let's crop it
+            // but let's also check if it contains the entire image, which means, it is useless!
+            if (roi.contains(bounds)) {
+                roi = null;
+            } else {
+                // ROI does not contain the reference image while it intersects it, hence let's r
+                // massage the ROI to capture so.
+                roi = roi.intersect(new ROIShape(bounds));
+            }
+
+        }
+    }
 
     return new ChangeMatrixOpImage(reference, now, renderHints, layout, roi,
             result);

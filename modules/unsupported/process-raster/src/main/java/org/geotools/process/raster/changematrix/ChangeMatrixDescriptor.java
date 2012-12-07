@@ -221,7 +221,7 @@ public static final int RESULT_ARG_INDEX = 1;
 
 public static final String[] PARAM_NAMES = { "roi", "result" };
 
-private static final Class[] PARAM_CLASSES = { javax.media.jai.ROI.class,
+private static final Class<?>[] PARAM_CLASSES = { javax.media.jai.ROI.class,
         ChangeMatrix.class };
 
 private static final Object[] PARAM_DEFAULTS = { (ROI) null,
