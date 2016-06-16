@@ -161,27 +161,6 @@ public class CatalogManager {
         return catalog;
     }
 
-    /**
-     * Tries to drop a datastore referred by the datastore connections 
-     * properties specified in the provided file.
-     * 
-     * Current implementation only drop a postGIS datastore.
-     * 
-     * @param datastoreProperties
-     * @throws IOException
-     */
-    public void dropDatastore(File datastoreProperties) throws IOException {
-        final Properties properties = createGranuleCatalogProperties(datastoreProperties);
-        final String SPIClass = properties.getProperty("SPI");
-        try {
-            // drop a datastore. Right now, only postGIS drop is supported
-            final DataStoreFactorySpi spi = (DataStoreFactorySpi) Class.forName(SPIClass).newInstance();
-            Utils.dropDB(spi, properties);
-        } catch (Exception e) {
-            final IOException ioe = new IOException(e);
-            throw ioe;
-        } 
-    }
 
     public Properties createGranuleCatalogProperties(File datastoreProperties) throws IOException {
         Properties properties = CoverageUtilities.loadPropertiesFromURL(DataUtilities.fileToURL(datastoreProperties));
